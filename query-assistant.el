@@ -36,7 +36,10 @@
 (defvar query-assistant-claude-key nil
   "The key to the Claude Anthropic assistant.")
 
-(defun query-assistant (assistant query)
+(defun query-assistant (assistant query &optional callback)
+  "Query ASSISTANT about QUERY.
+If CALLBACK, do this asynchronously.  CALLBACK will be called
+with the result.q"
   (cl-destructuring-bind (url headers data parser)
       (funcall (intern (format "query-assistant--backend-%s" assistant))
 	       query)
@@ -48,14 +51,26 @@
               ("Content-Type" ."application/json")
 	      ("Accept" . "application/json")
 	      ,@headers)))
-      (funcall
-       parser
-       (with-current-buffer (url-retrieve-synchronously url t)
-	 (goto-char (point-min))
-	 (unwind-protect
-	     (and (search-forward "\n\n" nil t)
-		  (json-parse-buffer))
-	   (kill-buffer (current-buffer))))))))
+      (if callback
+	  (url-retrieve
+	   url
+	   (lambda (_)
+	     (goto-char (point-min))
+	     (let ((result
+		    (unwind-protect
+			(and (search-forward "\n\n" nil t)
+			     (funcall parser (json-parse-buffer)))
+		      (kill-buffer (current-buffer)))))
+	       (funcall callback result))))
+	;; Synchronous.
+	(funcall
+	 parser
+	 (with-current-buffer (url-retrieve-synchronously url t)
+	   (goto-char (point-min))
+	   (unwind-protect
+	       (and (search-forward "\n\n" nil t)
+		    (json-parse-buffer))
+	     (kill-buffer (current-buffer)))))))))
 
 (defun query-assistant--hash (&rest values)
   (cl-loop with table = (make-hash-table :test #'equal)
