@@ -82,7 +82,7 @@ with the result.q"
   (unless query-assistant-gemini-key
     (user-error "`query-assistant-gemini-key' has to be set"))
   (list
-   (concat "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="
+   (concat "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key="
 	   query-assistant-gemini-key)
    nil
    (query-assistant--hash
